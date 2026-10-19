@@ -1,0 +1,17 @@
+{
+  "id": "song-01",
+  "title": "Exemplo Didático",
+  "artist": "Artista Demo",
+  "youtubeId": "dQw4w9WgXcQ",
+  "dataFile": "songs/sample-song.json",
+  "lyrics": [
+    {
+      "time": 2.5,
+      "segments": [
+        { "hanzi": "你好", "translation": "Olá" },
+        { "hanzi": "世界", "translation": "mundo" }
+      ],
+      "lineTranslation": "Olá, mundo!"
+    }
+  ]
+}
