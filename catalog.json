@@ -1,0 +1,9 @@
+[
+  {
+    "id": "song-01",
+    "title": "Exemplo Didático",
+    "artist": "Artista Demo",
+    "youtubeId": "dQw4w9WgXcQ",
+    "dataFile": "songs/sample-song.json"
+  }
+]
