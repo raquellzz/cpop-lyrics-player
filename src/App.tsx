@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Star, UserCircle, LogOut, PlusCircle } from 'lucide-react';
+import { Star, UserCircle, LogOut, PlusCircle, Trash2, Edit3 } from 'lucide-react';
 import { Player } from './components/Player';
 import { LyricsViewer } from './components/LyricsViewer';
 import { SongSelector } from './components/SongSelector';
@@ -14,8 +14,32 @@ export const App: React.FC = () => {
   const { user, setUser, signOut } = useAuthStore();
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [isEditingSong, setIsEditingSong] = useState(false);
 
   const isFavorite = currentSong ? savedSongIds.includes(currentSong.id) : false;
+
+  const handleDeleteSong = async () => {
+    if (!currentSong || !user) return;
+    
+    const confirmDelete = window.confirm(`Tem certeza que deseja apagar "${currentSong.title}" do catálogo global?`);
+    if (!confirmDelete) return;
+
+    // O .select() no final força o Supabase a nos dizer o que foi apagado
+    const { data, error } = await supabase
+      .from('songs')
+      .delete()
+      .eq('id', currentSong.id)
+      .select();
+
+    if (error) {
+      console.error("Erro detalhado do Supabase:", error);
+      alert(`Erro ao apagar: ${error.message} (Código: ${error.code})`);
+    } else if (data && data.length === 0) {
+      alert('Nenhuma música foi apagada. Você tem certeza que rodou o SQL de permissão (RLS)?');
+    } else {
+      window.location.reload(); 
+    }
+  };
 
   // Monitora a sessão do Supabase ao carregar o app
   useEffect(() => {
@@ -36,19 +60,21 @@ export const App: React.FC = () => {
       {/* Exibe o Modal se o state for true */}
       {showAuthModal && <Auth onClose={() => setShowAuthModal(false)} />}
 
-      {/* Novo Modal de Adição */}
+    {/* Novo Modal de Adição/Edição */}
     {showAddModal && (
       <AddSongModal 
-        onClose={() => setShowAddModal(false)} 
-        onSuccess={() => {
+        initialData={isEditingSong ? currentSong : null}
+        onClose={() => {
           setShowAddModal(false);
-          // Opcional: Você pode forçar um reload ou atualizar o Zustand aqui para mostrar a música nova na hora
+          setIsEditingSong(false);
+        }} 
+        onSuccess={() => {
           window.location.reload(); 
         }} 
       />
     )}
 
-      <header className="w-full max-w-4xl flex items-center justify-between pb-6 mb-6 border-b border-zinc-800">
+    <header className="w-full max-w-4xl flex items-center justify-between pb-6 mb-6 border-b border-zinc-800">
       <div>
         <h1 className="text-xl font-bold tracking-tight text-white">C-Pop Study Player</h1>
         <p className="text-xs text-zinc-400">Leitor dinâmico de caracteres e pinyin</p>
@@ -57,9 +83,12 @@ export const App: React.FC = () => {
       <div className="flex items-center gap-4">
         {user ? (
           <div className="flex items-center gap-3">
-            {/* Botão de Adicionar Música (Apenas para logados) */}
+            {/* Botão de Adicionar Música (Abre o modal VAZIO) */}
             <button 
-              onClick={() => setShowAddModal(true)}
+              onClick={() => {
+                setIsEditingSong(false);
+                setShowAddModal(true);
+              }}
               className="flex items-center gap-1.5 text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-3 py-1.5 rounded-lg transition-colors"
             >
               <PlusCircle className="w-4 h-4" />
@@ -77,12 +106,40 @@ export const App: React.FC = () => {
           </button>
         )}
 
-        {/* Botão Favoritar e Seletor de Músicas */}
+        {/* Ações da Música Selecionada */}
         {currentSong && (
-          <button onClick={() => { if (!user) setShowAuthModal(true); else toggleFavorite(currentSong.id); }}
-            className={`p-2 rounded-full transition-all duration-300 ${isFavorite ? 'text-yellow-500 bg-yellow-500/10' : 'text-zinc-500 hover:bg-zinc-800'}`}>
-            <Star className="w-5 h-5" fill={isFavorite ? "currentColor" : "none"} />
-          </button>
+          <div className="flex items-center gap-1 border-l border-zinc-800 pl-4">
+            {/* Botão Editar (Abre o modal PREENCHIDO) */}
+            {user && (
+              <button 
+                onClick={() => {
+                  setIsEditingSong(true);
+                  setShowAddModal(true);
+                }}
+                className="p-2 text-zinc-500 hover:text-blue-400 hover:bg-blue-400/10 rounded-full transition-colors"
+                title="Editar Música"
+              >
+                <Edit3 className="w-5 h-5" />
+              </button>
+            )}
+
+            {/* Botão Deletar */}
+            {user && (
+              <button 
+                onClick={handleDeleteSong}
+                className="p-2 text-zinc-500 hover:text-red-500 hover:bg-red-500/10 rounded-full transition-colors"
+                title="Apagar Música"
+              >
+                <Trash2 className="w-5 h-5" />
+              </button>
+            )}
+
+            {/* Botão Favoritar */}
+            <button onClick={() => { if (!user) setShowAuthModal(true); else toggleFavorite(currentSong.id); }}
+              className={`p-2 rounded-full transition-all duration-300 ${isFavorite ? 'text-yellow-500 bg-yellow-500/10' : 'text-zinc-500 hover:bg-zinc-800'}`}>
+              <Star className="w-5 h-5" fill={isFavorite ? "currentColor" : "none"} />
+            </button>
+          </div>
         )}
         <SongSelector />
       </div>
